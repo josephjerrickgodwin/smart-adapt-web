@@ -13,7 +13,7 @@
 
 <div
 	class=" text-xs font-bold py-2 {classNames[type] ??
-		classNames['info']}  w-fit px-2 rounded-sm uppercase line-clamp-1 mr-0.5 py-0.5"
+		classNames['info']}  w-fit px-2 rounded-lg uppercase line-clamp-1 mr-0.5 py-0.5"
 >
 	{content}
 </div>

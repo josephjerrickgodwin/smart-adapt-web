@@ -8,8 +8,8 @@
 	// Default values for permissions
 	const defaultPermissions = {
 		workspace: {
-			knowledge: false,
-			prompts: false,
+			knowledge: true,
+			prompts: true,
 		},
 		chat: {
 			controls: true,

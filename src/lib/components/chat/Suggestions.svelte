@@ -63,21 +63,6 @@
 	}
 </script>
 
-<div class="mb-1 flex gap-1 text-xs font-medium items-center text-gray-400 dark:text-gray-600">
-	{#if filteredPrompts.length > 0}
-		<Bolt />
-		{$i18n.t('Suggested')}
-	{:else}
-		<!-- Keine Vorschläge -->
-
-		<div
-			class="flex w-full text-center items-center justify-center self-start text-gray-400 dark:text-gray-600"
-		>
-			{$WEBUI_NAME} ‧ v{WEBUI_VERSION}
-		</div>
-	{/if}
-</div>
-
 <div class="h-40 overflow-auto scrollbar-none {className} items-start">
 	{#if filteredPrompts.length > 0}
 		{#each filteredPrompts as prompt, idx (prompt.id || prompt.content)}

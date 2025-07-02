@@ -105,13 +105,16 @@ export const AIAutocompletion = Extension.create({
 									.then((suggestion) => {
 										if (suggestion && suggestion.trim() !== '') {
 											if (view.state.selection.$head.pos === view.state.selection.$head.end()) {
-												if (view.state === newState) {
+												// Always use the latest editor state when applying the suggestion to avoid
+												// missing updates that happened while we were waiting for the server.
+												const latestNode = view.state.doc.nodeAt(currentPos);
+												if (latestNode && latestNode.type.name === 'paragraph') {
 													view.dispatch(
-														newState.tr.setNodeMarkup(currentPos, null, {
-															...newNode.attrs,
+														view.state.tr.setNodeMarkup(currentPos, null, {
+															...latestNode.attrs,
 															class: 'ai-autocompletion',
 															'data-prompt': prompt,
-															'data-suggestion': suggestion
+															'data-suggestion': ' ' + suggestion.trim()
 														})
 													);
 												}

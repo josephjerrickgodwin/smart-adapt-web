@@ -354,3 +354,91 @@ export const deleteKnowledgeById = async (token: string, id: string) => {
 
 	return res;
 };
+
+export const downloadAdapter = async (
+	token: string,
+	userId: string,
+	knowledgeId: string
+) => {
+	/*
+	 * Download adapter for a given knowledge base and user.
+	 * The backend returns a zip file in the response body.
+	 * It is streamed with the following headers:
+	 *   content-disposition: attachment; filename=adapter.zip
+	 *   content-type: application/x-zip-compressed
+	 * The function saves the file to the client using a temporary anchor element.
+	 */
+
+	let error: unknown | null = null;
+
+	try {
+		const url = `${WEBUI_API_BASE_URL}/knowledge/adapter/download?user_id=${userId}&knowledge_id=${knowledgeId}`;
+		const response = await fetch(url, {
+			method: 'GET',
+			headers: {
+				Authorization: `Bearer ${token}`
+			}
+		});
+
+		if (!response.ok) {
+			// Attempt to parse error message from json
+			let err: any = await response.text();
+			try {
+				err = JSON.parse(err);
+			} catch (_) {
+				/* ignore */
+			}
+			throw err;
+		}
+
+		const blob = await response.blob();
+
+		// Infer filename from content-disposition header if present
+		let filename = 'adapter.zip';
+		const contentDisposition = response.headers.get('content-disposition');
+		if (contentDisposition) {
+			const match = /filename\*=UTF-8''([^;]+)|filename="?([^";]+)"?/i.exec(contentDisposition);
+			if (match) {
+				filename = decodeURIComponent(match[1] || match[2]);
+			}
+		}
+
+		const blobUrl = window.URL.createObjectURL(blob);
+		const a = document.createElement('a');
+		a.href = blobUrl;
+		a.download = filename;
+		document.body.appendChild(a);
+		a.click();
+		a.remove();
+		window.URL.revokeObjectURL(blobUrl);
+
+		return true;
+	} catch (err) {
+		error = err;
+	}
+
+	if (error) {
+		throw error;
+	}
+};
+
+export async function stopKnowledgeTraining(token: string, userId: string, knowledgeId: string) {
+	const formData = new FormData();
+	formData.append('user_id', userId);
+	formData.append('knowledge_id', knowledgeId);
+
+	const response = await fetch(`${WEBUI_API_BASE_URL}/knowledge/fine-tune/stop`, {
+		method: 'POST',
+		headers: {
+			Authorization: `Bearer ${token}`
+		},
+		body: formData
+	});
+
+	if (!response.ok) {
+		const error = await response.text();
+		throw new Error(error);
+	}
+
+	return response.ok;
+}

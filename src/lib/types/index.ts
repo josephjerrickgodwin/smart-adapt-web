@@ -13,3 +13,18 @@ export enum TTS_RESPONSE_SPLIT {
 	PARAGRAPHS = 'paragraphs',
 	NONE = 'none'
 }
+
+export type KnowledgeBase = {
+	id: string;
+	name: string;
+	description: string;
+	user?: {
+		id: string;
+		name?: string;
+		email?: string;
+	};
+	data?: {
+		status: 'In Progress' | 'Completed' | 'Error';
+	};
+	updated_at: number;
+};

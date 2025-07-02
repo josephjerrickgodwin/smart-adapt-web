@@ -9,6 +9,9 @@
 
 	export let containerClassName = 'p-3';
 	export let className = 'bg-gray-50 dark:bg-gray-900 rounded-2xl';
+	export let maxWidth: string = '';
+	export let maxHeight: string = '';
+	export let height: string = '';
 
 	let modalElement = null;
 	let mounted = false;
@@ -74,9 +77,8 @@
 		}}
 	>
 		<div
-			class=" m-auto max-w-full {sizeToWidth(size)} {size !== 'full'
-				? 'mx-2'
-				: ''} shadow-3xl min-h-fit scrollbar-hidden {className}"
+			class="m-auto max-w-full {sizeToWidth(size)} {size !== 'full' ? 'mx-2' : ''} shadow-3xl min-h-fit scrollbar-hidden {className}"
+			style="{maxWidth ? `max-width: ${maxWidth};` : ''}{maxHeight ? ` max-height: ${maxHeight};` : ''}{height ? ` height: ${height};` : ''}"
 			in:flyAndScale
 			on:mousedown={(e) => {
 				e.stopPropagation();

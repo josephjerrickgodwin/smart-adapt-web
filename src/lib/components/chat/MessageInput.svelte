@@ -1,7 +1,6 @@
 <script lang="ts">
 	import { toast } from 'svelte-sonner';
 	import { v4 as uuidv4 } from 'uuid';
-	import { createPicker } from '$lib/utils/google-drive-picker';
 
 	import { onMount, tick, getContext, createEventDispatcher, onDestroy } from 'svelte';
 	const dispatch = createEventDispatcher();
@@ -28,7 +27,6 @@
 
 	import { WEBUI_BASE_URL, WEBUI_API_BASE_URL, PASTED_TEXT_CHARACTER_LIMIT } from '$lib/constants';
 
-	import InputMenu from './MessageInput/InputMenu.svelte';
 	import VoiceRecording from './MessageInput/VoiceRecording.svelte';
 	import FilesOverlay from './MessageInput/FilesOverlay.svelte';
 	import Commands from './MessageInput/Commands.svelte';
@@ -44,7 +42,6 @@
 	import Photo from '../icons/Photo.svelte';
 	import CommandLine from '../icons/CommandLine.svelte';
 	import { KokoroWorker } from '$lib/workers/KokoroWorker';
-	import DocumentArrowUpSolid from '$lib/components/icons/DocumentArrowUpSolid.svelte';
 
 	const i18n = getContext('i18n');
 
@@ -73,6 +70,16 @@
 	export let webSearchEnabled = false;
 	export let codeInterpreterEnabled = false;
 
+	export let globalLoading = false;
+
+	// Add reactive validation constants/variables
+	const PROMPT_CHARACTER_LIMIT = PASTED_TEXT_CHARACTER_LIMIT; // current limit: 1000 characters
+	let isPromptValid = true;
+	$: isPromptValid = prompt.length <= PROMPT_CHARACTER_LIMIT;
+	let promptLength = 0;
+	$: promptLength = prompt.length;
+	$: canSend = !(prompt === '' && files.length === 0) && !globalLoading && isPromptValid;
+
 	$: onChange({
 		prompt,
 		files,
@@ -92,6 +99,7 @@
 	let dragged = false;
 
 	let user = null;
+	let intervalId;
 	export let placeholder = '';
 
 	let fileUploadEnabled = true;
@@ -102,6 +110,16 @@
 		(model) => $models.find((m) => m.id === model)?.info?.meta?.capabilities?.vision ?? true
 	);
 
+	// Combine conditions for enabling the file-upload button
+	$: canUploadFiles =
+		fileUploadEnabled && // user permission
+		!globalLoading && // no ongoing upload
+		files.length === 0 && // no file already attached
+		isPromptValid; // within character limit
+
+	// Record voice availability (no permission flag needed)
+	$: canRecordVoice = !globalLoading && files.length === 0 && isPromptValid;
+
 	const scrollToBottom = () => {
 		const element = document.getElementById('messages-container');
 		element.scrollTo({
@@ -110,42 +128,15 @@
 		});
 	};
 
-	const screenCaptureHandler = async () => {
-		try {
-			// Request screen media
-			const mediaStream = await navigator.mediaDevices.getDisplayMedia({
-				video: { cursor: 'never' },
-				audio: false
-			});
-			// Once the user selects a screen, temporarily create a video element
-			const video = document.createElement('video');
-			video.srcObject = mediaStream;
-			// Ensure the video loads without affecting user experience or tab switching
-			await video.play();
-			// Set up the canvas to match the video dimensions
-			const canvas = document.createElement('canvas');
-			canvas.width = video.videoWidth;
-			canvas.height = video.videoHeight;
-			// Grab a single frame from the video stream using the canvas
-			const context = canvas.getContext('2d');
-			context.drawImage(video, 0, 0, canvas.width, canvas.height);
-			// Stop all video tracks (stop screen sharing) after capturing the image
-			mediaStream.getTracks().forEach((track) => track.stop());
+	onMount(() => {
+		intervalId = setInterval(() => {
+			globalLoading = files.some(f => f.status === 'uploading')
+		}, 1000); // every 1000 ms (1 second)
+	});
 
-			// bring back focus to this current tab, so that the user can see the screen capture
-			window.focus();
-
-			// Convert the canvas to a Base64 image URL
-			const imageUrl = canvas.toDataURL('image/png');
-			// Add the captured image to the files array to render it
-			files = [...files, { type: 'image', url: imageUrl }];
-			// Clean memory: Clear video srcObject
-			video.srcObject = null;
-		} catch (error) {
-			// Handle any errors (e.g., user cancels screen sharing)
-			console.error('Error capturing screen:', error);
-		}
-	};
+	onDestroy(() => {
+		clearInterval(intervalId);
+	});
 
 	const uploadFileHandler = async (file, fullContext: boolean = false) => {
 		if ($_user?.role !== 'admin' && !($_user?.permissions?.chat?.file_upload ?? true)) {
@@ -686,8 +677,6 @@
 
 														return null;
 													});
-
-													console.log(res);
 													return res;
 												}}
 												on:keydown={async (e) => {
@@ -1051,16 +1040,17 @@
 								<div class=" flex justify-between mt-1.5 mb-2.5 mx-0.5 max-w-full">
 									<div class="ml-1 self-end gap-0.5 flex items-center flex-1 max-w-[80%]">
 										<Tooltip
-											content={!fileUploadEnabled ? $i18n.t(
-												'You do not have permission to upload files'
-												) : 'Upload Files'}
+											content={!canUploadFiles
+												? $i18n.t('File upload unavailable')
+												: 'Upload Files'}
 										>
 											<button
-												class="bg-transparent hover:bg-gray-100 text-gray-800 dark:text-white dark:hover:bg-gray-800 transition rounded-full p-1.5 outline-hidden focus:outline-hidden"
+												class="bg-transparent transition rounded-full p-1.5 outline-hidden focus:outline-hidden {canUploadFiles ? 'hover:bg-gray-100 text-gray-800 dark:text-white dark:hover:bg-gray-800' : 'opacity-50 cursor-not-allowed text-gray-400'}"
 												type="button"
 												aria-label="More"
+												disabled={!canUploadFiles}
 												on:click={() => {
-													if (fileUploadEnabled) {
+													if (canUploadFiles) {
 														filesInputElement.click();
 													}
 												}}
@@ -1083,6 +1073,16 @@
 												</svg>
 											</button>
 										</Tooltip>
+
+										{#if isPromptValid}
+											<span class="text-xs text-gray-400 mt-1 ml-1 select-none">
+												{promptLength}/{PROMPT_CHARACTER_LIMIT} Tokens
+											</span>
+										{:else}
+											<span class="text-xs text-red-600 font-medium mt-1 ml-1 select-none">
+												{promptLength}/{PROMPT_CHARACTER_LIMIT} Tokens
+											</span>
+										{/if}
 
 										<div class="flex gap-0.5 items-center overflow-x-auto scrollbar-none flex-1">
 											{#if $_user}
@@ -1148,12 +1148,14 @@
 
 									<div class="self-end flex space-x-1 mr-1 shrink-0">
 										{#if !history?.currentId || history.messages[history.currentId]?.done == true}
-											<Tooltip content={$i18n.t('Record voice')}>
+											<Tooltip content={canRecordVoice ? $i18n.t('Record voice') : $i18n.t('Voice input unavailable')}>
 												<button
 													id="voice-input-button"
-													class=" text-gray-600 dark:text-gray-300 hover:text-gray-700 dark:hover:text-gray-200 transition rounded-full p-1.5 mr-0.5 self-center"
+													class="transition rounded-full p-1.5 mr-0.5 self-center {canRecordVoice ? 'text-gray-600 dark:text-gray-300 hover:text-gray-700 dark:hover:text-gray-200' : 'opacity-50 cursor-not-allowed text-gray-400 dark:text-gray-600'}"
 													type="button"
+													disabled={!canRecordVoice}
 													on:click={async () => {
+														if (!canRecordVoice) return;
 														try {
 															let stream = await navigator.mediaDevices
 																.getUserMedia({ audio: true })
@@ -1266,13 +1268,13 @@
 													<Tooltip content={$i18n.t('Send message')}>
 														<button
 															id="send-message-button"
-															class="{!(prompt === '' && files.length === 0)
-																? webSearchEnabled || ($settings?.webSearch ?? false) === 'always'
+															class="{canSend
+																? (webSearchEnabled || ($settings?.webSearch ?? false) === 'always'
 																	? 'bg-blue-500 text-white hover:bg-blue-400 '
-																	: 'bg-black text-white hover:bg-gray-900 dark:bg-white dark:text-black dark:hover:bg-gray-100 '
-																: 'text-white bg-gray-200 dark:text-gray-900 dark:bg-gray-700 disabled'} transition rounded-full p-1.5 self-center"
+																	: 'bg-black text-white hover:bg-gray-900 dark:bg-white dark:text-black dark:hover:bg-gray-100 ')
+																: 'text-white bg-gray-200 dark:text-gray-900 dark:bg-gray-700 disabled'} transition rounded-full p-1.5 self-center disabled:cursor-not-allowed"
 															type="submit"
-															disabled={prompt === '' && files.length === 0}
+															disabled={!canSend}
 														>
 															<svg
 																xmlns="http://www.w3.org/2000/svg"

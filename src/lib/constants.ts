@@ -15,9 +15,8 @@ export const IMAGES_API_BASE_URL = `${WEBUI_BASE_URL}/api/v1/images`;
 export const RETRIEVAL_API_BASE_URL = `${WEBUI_BASE_URL}/api/v1/retrieval`;
 
 export const WEBUI_VERSION = APP_VERSION;
-export const WEBUI_BUILD_HASH = APP_BUILD_HASH;
 
-export const PASTED_TEXT_CHARACTER_LIMIT = 1000;
+export const PASTED_TEXT_CHARACTER_LIMIT = 12000;
 
 // Source: https://kit.svelte.dev/docs/modules#$env-static-public
 // This feature, akin to $env/static/private, exclusively incorporates environment variables
