@@ -16,10 +16,6 @@
 
 	let changelog = null;
 
-	onMount(async () => {
-		const res = await getChangelog();
-		changelog = res;
-	});
 </script>
 
 <Modal bind:show size="lg">

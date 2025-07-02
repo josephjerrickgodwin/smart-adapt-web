@@ -1189,7 +1189,7 @@
 			);
 		}
 
-		console.log(data);
+		// console.log(data);
 		if (autoScroll) {
 			scrollToBottom();
 		}
@@ -1410,12 +1410,12 @@
 					}
 					responseMessage.userContext = userContext;
 
-					const chatEventEmitter = await getChatEventEmitter(model.id, _chatId);
+					//const chatEventEmitter = await getChatEventEmitter(model.id, _chatId);
 
 					scrollToBottom();
 					await sendPromptSocket(_history, model, responseMessageId, _chatId);
 
-					if (chatEventEmitter) clearInterval(chatEventEmitter);
+					//if (chatEventEmitter) clearInterval(chatEventEmitter);
 				} else {
 					toast.error($i18n.t(`Model {{modelId}} not found`, { modelId }));
 				}

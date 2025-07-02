@@ -582,13 +582,7 @@
 								message?.statusHistory ?? [...(message?.status ? [message?.status] : [])]
 							).at(-1)}
 							{#if !status?.hidden}
-								<div class="status-description flex items-center gap-2 py-0.5">
-									{#if status?.done === false}
-										<div class="">
-											<Spinner className="size-4" />
-										</div>
-									{/if}
-
+								<div class="status-description flex items-center gap-2 py-2 mb-1">
 									{#if status?.action === 'web_search' && status?.urls}
 										<WebSearchResults {status}>
 											<div class="flex flex-col justify-center -space-y-0.5">

@@ -4,16 +4,6 @@
 	import { onMount } from 'svelte';
 
 	onMount(() => {
-		if ($user?.role !== 'admin') {
-			if ($user?.permissions?.workspace?.knowledge) {
-				goto('/workspace/knowledge');
-			} else if ($user?.permissions?.workspace?.prompts) {
-				goto('/workspace/prompts');
-			} else {
-				goto('/');
-			}
-		} else {
-			goto('/workspace/knowledge');
-		}
+		goto('/workspace/knowledge');
 	});
 </script>
